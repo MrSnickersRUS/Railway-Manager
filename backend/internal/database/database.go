@@ -1,7 +1,7 @@
 package database
 
 import (
-	"fmt"
+	"os"
 	"railway-dispatcher/internal/config"
 	"railway-dispatcher/internal/models"
 
@@ -13,8 +13,13 @@ var DB *gorm.DB
 
 func Init(cfg *config.Config) error {
 	var err error
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName)
+	var dsn string
+
+	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
+		dsn = dbURL
+	} else {
+		dsn = "host=" + cfg.DBHost + " port=" + cfg.DBPort + " user=" + cfg.DBUser + " password=" + cfg.DBPassword + " dbname=" + cfg.DBName + " sslmode=disable"
+	}
 
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
