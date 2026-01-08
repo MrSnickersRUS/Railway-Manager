@@ -1,30 +1,22 @@
-FROM golang:1.21-alpine AS builder
-
-RUN apk add --no-cache gcc musl-dev
+FROM golang:1.23-alpine AS builder
+ENV GOTOOLCHAIN=auto
 
 WORKDIR /app
 
-COPY backend/go.mod backend/go.sum ./
+COPY backend/ ./
+
 RUN go mod download
 
-COPY backend/ .
+RUN go build -o server ./cmd/server
 
-RUN CGO_ENABLED=1 GOOS=linux go build -o railway-dispatcher ./cmd/server
+FROM alpine:latest
 
-FROM alpine:3.19
+WORKDIR /root/
 
 RUN apk --no-cache add ca-certificates
 
-WORKDIR /app
-
-COPY --from=builder /app/railway-dispatcher .
-
-ENV SERVER_PORT=8080
-ENV JWT_SECRET=production-secret-change-me
-ENV DB_PATH=/app/data/railway.db
-
-RUN mkdir -p /app/data
+COPY --from=builder /app/server .
 
 EXPOSE 8080
 
-CMD ["./railway-dispatcher"]
+CMD ["./server"]
