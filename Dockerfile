@@ -1,4 +1,14 @@
-FROM golang:1.23-alpine AS builder
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /frontend
+
+COPY frontend/package*.json ./
+RUN npm ci
+
+COPY frontend/ .
+RUN npm run build
+
+FROM golang:1.23-alpine AS backend-builder
 ENV GOTOOLCHAIN=auto
 
 WORKDIR /app
@@ -15,7 +25,8 @@ WORKDIR /root/
 
 RUN apk --no-cache add ca-certificates
 
-COPY --from=builder /app/server .
+COPY --from=backend-builder /app/server .
+COPY --from=frontend-builder /frontend/dist ./frontend
 
 EXPOSE 8080
 

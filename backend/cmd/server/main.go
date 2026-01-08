@@ -4,6 +4,10 @@ import (
 	"crypto/rand"
 	"log"
 	"math/big"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"railway-dispatcher/internal/config"
 	"railway-dispatcher/internal/database"
@@ -78,7 +82,24 @@ func main() {
 		api.GET("/audit", middleware.RequireRole(models.RoleAdmin), handlers.GetAuditLogs)
 	}
 
-	log.Printf("Сервер запущен на порту %s", cfg.ServerPort)
+	frontendPath := "./frontend"
+	if _, err := os.Stat(frontendPath); err == nil {
+		r.Static("/assets", filepath.Join(frontendPath, "assets"))
+		r.StaticFile("/favicon.ico", filepath.Join(frontendPath, "favicon.ico"))
+
+		r.NoRoute(func(c *gin.Context) {
+			if !strings.HasPrefix(c.Request.URL.Path, "/api") {
+				c.File(filepath.Join(frontendPath, "index.html"))
+				return
+			}
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+		})
+		log.Println("Frontend: ./frontend")
+	} else {
+		log.Println("Frontend not found, API only mode")
+	}
+
+	log.Printf("Server started on port %s", cfg.ServerPort)
 	r.Run(":" + cfg.ServerPort)
 }
 
